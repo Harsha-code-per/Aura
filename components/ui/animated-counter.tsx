@@ -30,14 +30,11 @@ export function AnimatedCounter({
   startOnView = true,
 }: AnimatedCounterProps) {
   const containerRef = useRef<HTMLSpanElement>(null);
-  const [inView, setInView] = useState(false);
+  const [inView, setInView] = useState(!startOnView);
   const countRef = useRef({ val: 0 });
 
   useEffect(() => {
-    if (!startOnView) {
-      setInView(true);
-      return;
-    }
+    if (!startOnView) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {

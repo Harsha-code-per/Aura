@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // onAuthChange wraps both Firebase onAuthStateChanged and mock subscriber
-    const unsubscribe = onAuthChange((currentUser: any) => {
+    const unsubscribe = onAuthChange((currentUser: { uid: string; displayName: string | null; email: string | null; photoURL: string | null } | null) => {
       if (currentUser) {
         setUser({
           uid: currentUser.uid,

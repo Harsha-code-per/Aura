@@ -41,6 +41,6 @@ export async function signOutUser() {
   return signOut(auth);
 }
 
-export function onAuthChange(callback: (user: any) => void) {
+export function onAuthChange(callback: (user: import("firebase/auth").User | null) => void) {
   return auth.onAuthStateChanged(callback);
 }

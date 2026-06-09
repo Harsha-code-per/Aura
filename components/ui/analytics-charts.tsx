@@ -58,7 +58,7 @@ export function AnalyticsCharts({ weeklyData, todayTotal, mounted }: AnalyticsCh
       {/* Today's Score Dial with deviation status */}
       <GlassCard className="p-6 text-center border-primary/10" hover={false}>
         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-          Today's Carbon Output
+          Today&apos;s Carbon Output
         </span>
         <div className="my-6 flex items-baseline justify-center gap-1.5">
           <AnimatedCounter

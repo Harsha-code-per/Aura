@@ -43,14 +43,15 @@ export interface CommunityPost {
 // --- Helpers ---
 
 // Sanitize object properties to prevent Firestore "Unsupported field value: undefined" errors
-function sanitizeData(obj: any): any {
-  const sanitized: any = {};
+export function sanitizeData(obj: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
   Object.keys(obj).forEach((key) => {
-    if (obj[key] !== undefined && obj[key] !== null) {
-      if (typeof obj[key] === "object" && !Array.isArray(obj[key]) && !(obj[key] instanceof Timestamp)) {
-        sanitized[key] = sanitizeData(obj[key]);
+    const value = obj[key];
+    if (value !== undefined && value !== null) {
+      if (typeof value === "object" && !Array.isArray(value) && !(value instanceof Timestamp)) {
+        sanitized[key] = sanitizeData(value as Record<string, unknown>);
       } else {
-        sanitized[key] = obj[key];
+        sanitized[key] = value;
       }
     }
   });

@@ -45,7 +45,7 @@ export default function RootLayout({
           <AuthProvider>
             <Navbar />
             {/* Nav height buffer */}
-            <div className="h-[73px]" />
+            <div className="h-18.25" />
             <main className="flex-1 flex flex-col">{children}</main>
             <Footer />
             <Toaster position="top-right" richColors />

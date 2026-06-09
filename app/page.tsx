@@ -11,7 +11,7 @@ import { Sparkles } from "@/components/ui/sparkles";
 import { GlassCard } from "@/components/ui/glass-card";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { TracingBeam } from "@/components/ui/tracing-beam";
-import { Brain, Leaf, MapPin, Users, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Brain, Leaf, MapPin, Users, ChevronRight } from "lucide-react";
 
 // Register GSAP ScrollTrigger plugin on client-side
 if (typeof window !== "undefined") {
@@ -206,7 +206,7 @@ export default function Home() {
                 Natural Language AI
               </h3>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Just type: <span className="italic text-foreground">"Took an auto for 5km and had paneer tikka for dinner"</span>. Our AI handles the math instantly.
+                Just type: <span className="italic text-foreground">&ldquo;Took an auto for 5km and had paneer tikka for dinner&rdquo;</span>. Our AI handles the math instantly.
               </p>
             </GlassCard>
 

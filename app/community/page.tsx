@@ -91,7 +91,6 @@ export default function CommunityPage() {
   useEffect(() => {
     if (!user) return;
 
-    setLoadingFeed(true);
     const unsubscribe = getCommunityFeed((updatedPosts) => {
       setPosts(updatedPosts);
       setLoadingFeed(false);
@@ -136,7 +135,7 @@ export default function CommunityPage() {
         toast.error(result.error || "Could not calculate savings. Please try again.");
         return null;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       toast.error("Failed to estimate savings.");
       return null;
@@ -181,7 +180,7 @@ export default function CommunityPage() {
       setContent("");
       setEstimatedSavings(null);
       setHasChanges(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       toast.error("Failed to post message.");
     } finally {
@@ -236,11 +235,15 @@ export default function CommunityPage() {
 
         <form onSubmit={handleCreatePost} className="flex flex-col gap-5">
           <div>
+            <label htmlFor="community-post-content" className="sr-only">
+              Describe your green action
+            </label>
             <Textarea
+              id="community-post-content"
               placeholder="Describe your green action, e.g., 'Took the Chennai Metro today to work instead of my regular cab ride for 12km'..."
               value={content}
               onChange={(e) => handleContentChange(e.target.value)}
-              className="min-h-[110px] rounded-2xl border-border/60 bg-background/50 p-4 focus-visible:ring-primary focus-visible:border-primary text-sm resize-none transition-all duration-300"
+              className="min-h-27.1 rounded-2xl border-border/60 bg-background/50 p-4 focus-visible:ring-primary focus-visible:border-primary text-sm resize-none transition-all duration-300"
               disabled={posting || calculating}
               required
             />
@@ -436,7 +439,7 @@ export default function CommunityPage() {
                 >
                   {/* Subtle impact gradient line for high saving posts */}
                   {isHighImpact && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-emerald-400" />
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-linear-to-b from-primary to-emerald-400" />
                   )}
 
                   {/* Card Header */}

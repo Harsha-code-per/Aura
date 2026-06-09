@@ -14,7 +14,6 @@ import { FloatingParticles } from "@/components/ui/floating-particles";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { Leaf } from "lucide-react";
 import { FaGoogle, FaGithub } from "react-icons/fa";
 import { toast } from "sonner";
 
@@ -61,9 +60,9 @@ export default function AuthPage() {
         toast.success("Account created successfully!");
       }
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err.message || "Authentication failed.");
+      toast.error(err instanceof Error ? err.message : "Authentication failed.");
     } finally {
       setLoading(false);
     }
@@ -79,9 +78,9 @@ export default function AuthPage() {
       }
       toast.success("Authenticated successfully!");
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err.message || "Social login failed.");
+      toast.error(err instanceof Error ? err.message : "Social login failed.");
     } finally {
       setLoading(false);
     }
@@ -158,10 +157,11 @@ export default function AuthPage() {
           <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
             {activeTab === "signup" && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground pl-1">
+                <label htmlFor="signup-name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground pl-1">
                   Full Name
                 </label>
                 <Input
+                  id="signup-name"
                   type="text"
                   placeholder="Rahul Kumar"
                   value={displayName}
@@ -173,10 +173,11 @@ export default function AuthPage() {
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground pl-1">
+              <label htmlFor="auth-email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground pl-1">
                 Email Address
               </label>
               <Input
+                id="auth-email"
                 type="email"
                 placeholder="rahul@example.com"
                 value={email}
@@ -187,10 +188,11 @@ export default function AuthPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground pl-1">
+              <label htmlFor="auth-password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground pl-1">
                 Password
               </label>
               <Input
+                id="auth-password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
@@ -217,11 +219,11 @@ export default function AuthPage() {
 
           {/* Divider */}
           <div className="relative flex py-5 items-center">
-            <div className="flex-grow border-t border-border/40"></div>
-            <span className="flex-shrink mx-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+            <div className="grow border-t border-border/40"></div>
+            <span className="shrink mx-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
               or continue with
             </span>
-            <div className="flex-grow border-t border-border/40"></div>
+            <div className="grow border-t border-border/40"></div>
           </div>
 
           {/* OAuth Buttons */}

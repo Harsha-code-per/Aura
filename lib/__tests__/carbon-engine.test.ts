@@ -1,6 +1,8 @@
-import { describe, test, expect, vi, beforeAll, afterAll } from "vitest";
+import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { parseActivityInput, parseCommunitySaving } from "@/lib/actions/gemini-parser";
-import { TRANSPORT_FACTORS, FOOD_FACTORS } from "@/lib/data/emission-factors";
+import { TRANSPORT_FACTORS, FOOD_FACTORS, getEmissionFactorContext } from "@/lib/data/emission-factors";
+import { sanitizeData } from "@/lib/firebase/firestore";
+import { Timestamp } from "firebase/firestore";
 
 describe("🌿 Aura Carbon Engine — Core Calculations & Heuristics", () => {
   const originalEnv = process.env;
@@ -168,6 +170,63 @@ describe("🌿 Aura Carbon Engine — Core Calculations & Heuristics", () => {
       expect(secondResult.success).toBe(firstResult.success);
       expect(secondResult.totalCO2).toBe(firstResult.totalCO2);
       expect(secondResult.activities).toEqual(firstResult.activities);
+    });
+  });
+
+  describe("6. Context Generation Verification", () => {
+    test("getEmissionFactorContext generates descriptive text containing standard factors", () => {
+      const context = getEmissionFactorContext();
+      
+      expect(context).toContain("=== INDIAN EMISSION FACTORS ===");
+      expect(context).toContain("Transport");
+      expect(context).toContain("Food");
+      expect(context).toContain("Energy");
+      expect(context).toContain("Auto-rickshaw");
+      expect(context).toContain("Chicken Biryani");
+      expect(context).toContain("AC (1.5 ton)");
+      expect(context).toContain("5.2 kg CO2/day");
+    });
+  });
+
+  describe("7. Firestore Sanitization Utility", () => {
+    test("sanitizeData strips undefined and null values while preserving arrays and Firestore Timestamp instances", () => {
+      const mockTimestamp = Timestamp.fromDate(new Date());
+      const rawData = {
+        userId: "user-123",
+        displayName: "John Doe",
+        photoURL: undefined,
+        co2Saved: null,
+        createdDate: "2026-06-09",
+        createdAt: mockTimestamp,
+        tips: ["Tip A", "Tip B"],
+        nested: {
+          foo: "bar",
+          baz: undefined,
+          innerArray: [1, 2, 3],
+          innerTimestamp: mockTimestamp
+        }
+      };
+
+      const sanitized = sanitizeData(rawData);
+
+      // Verify defined fields are preserved
+      expect(sanitized.userId).toBe("user-123");
+      expect(sanitized.displayName).toBe("John Doe");
+      expect(sanitized.createdDate).toBe("2026-06-09");
+      expect(sanitized.createdAt).toBe(mockTimestamp);
+      expect(sanitized.tips).toEqual(["Tip A", "Tip B"]);
+
+      // Verify undefined and null fields are stripped
+      expect(sanitized.photoURL).toBeUndefined();
+      expect(sanitized.co2Saved).toBeUndefined();
+
+      // Verify nested objects are recursively sanitized
+      expect(sanitized.nested).toBeDefined();
+      const nested = sanitized.nested as Record<string, unknown>;
+      expect(nested.foo).toBe("bar");
+      expect(nested.baz).toBeUndefined();
+      expect(nested.innerArray).toEqual([1, 2, 3]);
+      expect(nested.innerTimestamp).toBe(mockTimestamp);
     });
   });
 });

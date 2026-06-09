@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/layout/auth-provider";
 import {
@@ -12,17 +12,14 @@ import {
 } from "@/lib/firebase/firestore";
 import { parseActivityInput } from "@/lib/actions/gemini-parser";
 import { GlassCard } from "@/components/ui/glass-card";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { AnalyticsCharts } from "@/components/ui/analytics-charts";
 import {
-  Sparkles,
   Leaf,
   Send,
   Zap,
-  Info,
   Lightbulb,
   Check,
   Plus,
@@ -71,8 +68,8 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
-  // Load stats from Firestore
-  const fetchDashboardStats = async () => {
+  // Load stats from Firestore wrapped in useCallback to prevent reference churn
+  const fetchDashboardStats = useCallback(async () => {
     if (!user) return;
     setLoadingStats(true);
     try {
@@ -88,17 +85,23 @@ export default function DashboardPage() {
     } finally {
       setLoadingStats(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (user) {
-      fetchDashboardStats();
+      const timer = setTimeout(() => {
+        fetchDashboardStats();
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [user]);
+  }, [user, fetchDashboardStats]);
 
-  // Handle SSR check for chart rendering
+  // Handle SSR check for chart rendering deferred to prevent AST sync warnings
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleChipClick = (text: string) => {
@@ -118,7 +121,7 @@ export default function DashboardPage() {
       const response = await parseActivityInput(rawText);
       if (response.success) {
         setParsedData({
-          activities: response.activities.map((a: any) => ({
+          activities: response.activities.map((a: { name: string; category: string; detail?: string; co2: number }) => ({
             name: a.name,
             category: a.category,
             detail: a.detail,
@@ -133,7 +136,7 @@ export default function DashboardPage() {
       } else {
         toast.error(response.error || "Gemini AI failed to parse input.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       toast.error("Could not connect to AI parser.");
     } finally {
@@ -222,15 +225,19 @@ export default function DashboardPage() {
             </div>
             
             <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-              Describe your day's primary actions in simple conversational text. We support English (e.g., "MTC bus for 8km and paneer roll").
+              Describe your day&apos;s primary actions in simple conversational text. We support English (e.g., &ldquo;MTC bus for 8km and paneer roll&rdquo;).
             </p>
 
             <form onSubmit={handleAnalyze} className="flex flex-col gap-4">
+              <label htmlFor="dashboard-activity-input" className="sr-only">
+                Describe your daily actions
+              </label>
               <Textarea
+                id="dashboard-activity-input"
                 placeholder="Type your activities here... (e.g., I rode my bike for 10km, had dal chawal for lunch, and turned on the AC for 3 hours)"
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
-                className="min-h-[120px] rounded-xl border-border/60 bg-background/50 p-4 focus:ring-primary focus:border-primary text-sm md:text-base resize-none"
+                className="min-h-30 rounded-xl border-border/60 bg-background/50 p-4 focus:ring-primary focus:border-primary text-sm md:text-base resize-none"
                 disabled={analyzing}
               />
 
@@ -296,7 +303,7 @@ export default function DashboardPage() {
 
               {/* Summary Text */}
               <p className="text-sm italic text-muted-foreground bg-secondary/40 border border-border/20 p-4 rounded-xl mb-6">
-                "{parsedData.summary}"
+                &ldquo;{parsedData.summary}&rdquo;
               </p>
 
               {/* Broken down items */}
@@ -346,7 +353,7 @@ export default function DashboardPage() {
                   {saving ? (
                     <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Check className="mr-2 h-4 w-4 stroke-[3]" />
+                    <Check className="mr-2 h-4 w-4 stroke-3" />
                   )}
                   Save to Tracker
                 </Button>
@@ -395,7 +402,7 @@ export default function DashboardPage() {
                     >
                       <div className="flex flex-col gap-1 overflow-hidden max-w-[70%]">
                         <span className="font-semibold text-foreground truncate block">
-                          "{ent.rawInput}"
+                          &ldquo;{ent.rawInput}&rdquo;
                         </span>
                         <span className="text-xs text-muted-foreground">{timestampStr}</span>
                       </div>

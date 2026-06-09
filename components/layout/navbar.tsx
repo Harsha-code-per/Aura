@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/layout/auth-provider";
 import { signOutUser } from "@/lib/firebase/auth";
-import { Leaf, Sun, Moon, Menu, X, LogOut, User, BarChart2, Users } from "lucide-react";
+import { Sun, Moon, Menu, X, LogOut, User, BarChart2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -22,12 +22,17 @@ export function Navbar() {
 
   // Sync mounted status to avoid hydration mismatch
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   const handleLogout = async () => {
