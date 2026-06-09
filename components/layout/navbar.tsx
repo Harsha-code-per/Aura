@@ -172,7 +172,7 @@ export function Navbar() {
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="glass-strong fixed inset-x-0 top-[65px] bottom-0 z-40 flex flex-col justify-between p-8 animate-fade-in md:hidden">
+        <div className="glass-strong fixed inset-x-0 top-16.25 bottom-0 z-40 flex flex-col justify-between p-8 animate-fade-in md:hidden">
           <div className="flex flex-col gap-5">
             <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Navigation
@@ -190,7 +190,7 @@ export function Navbar() {
                       isActive ? "text-primary" : "text-foreground hover:text-primary"
                     )}
                   >
-                    {link.icon && <link.icon className="h-6 w-6 stroke-[2]" />}
+                    {link.icon && <link.icon className="h-6 w-6 stroke-2" />}
                     {link.name}
                   </Link>
                 );
