@@ -3,6 +3,35 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { TRANSPORT_FACTORS, FOOD_FACTORS, ENERGY_FACTORS } from "../data/emission-factors";
 
+// Cache store structures for optimization
+interface CacheEntry<T> {
+  value: T;
+  timestamp: number;
+}
+
+const activityCache = new Map<string, CacheEntry<ParseResult>>();
+const savingsCache = new Map<string, CacheEntry<CommunitySavingsResult>>();
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes in milliseconds
+const MAX_CACHE_SIZE = 100;
+
+function getFromCache<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function writeToCache<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T): void {
+  if (cache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = cache.keys().next().value as string | undefined;
+    if (oldestKey) cache.delete(oldestKey);
+  }
+  cache.set(key, { value, timestamp: Date.now() });
+}
+
 export interface ParseResult {
   success: boolean;
   activities: {
@@ -286,6 +315,13 @@ function parseOfflineHeuristic(input: string): ParseResult {
 export async function parseActivityInput(
   input: string
 ): Promise<ParseResult> {
+  const cacheKey = input.trim().toLowerCase();
+  const cachedResult = getFromCache(activityCache, cacheKey);
+  if (cachedResult) {
+    console.log(`[Aura Cache] Cache hit for activity input: "${cacheKey}"`);
+    return cachedResult;
+  }
+
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   
   // LOG KEY STATUS TO TERMINAL
@@ -303,7 +339,9 @@ export async function parseActivityInput(
 
   if (!apiKey || apiKey === "" || apiKey.includes("your-gemini")) {
     console.warn("Gemini API key is unconfigured. Falling back to Heuristic Parser.");
-    return parseOfflineHeuristic(input);
+    const fallback = parseOfflineHeuristic(input);
+    writeToCache(activityCache, cacheKey, fallback);
+    return fallback;
   }
 
   try {
@@ -316,7 +354,7 @@ export async function parseActivityInput(
       "gemini-2.0-flash",
       "gemini-1.5-flash"
     ];
-    let lastError: any = null;
+    let lastError: Error | unknown = null;
 
     for (const modelName of modelsToTry) {
       try {
@@ -338,7 +376,7 @@ export async function parseActivityInput(
         const parsed = JSON.parse(jsonMatch[1]);
         console.log(`[Aura Parser] Successfully parsed with model: ${modelName}`);
 
-        return {
+        const finalResult: ParseResult = {
           success: true,
           activities: parsed.activities || [],
           totalCO2: parsed.totalCO2 || 0,
@@ -346,45 +384,48 @@ export async function parseActivityInput(
           summary: parsed.summary || "",
           isOfflineFallback: false,
         };
-      } catch (err: any) {
-        console.warn(`[Aura Parser] Model ${modelName} failed:`, err.message || err);
+        writeToCache(activityCache, cacheKey, finalResult);
+        return finalResult;
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn(`[Aura Parser] Model ${modelName} failed:`, errMsg);
         lastError = err;
-        // Continue to the next model in the cascade
       }
     }
 
-    // If we reach here, all model calls failed. Check for capacity/rate limits
-    const isQuotaOrCapacity = lastError?.message?.includes("429") || 
-                              lastError?.message?.includes("503") ||
-                              lastError?.status === 429 || 
-                              lastError?.status === 503 ||
-                              lastError?.message?.toLowerCase().includes("quota") ||
-                              lastError?.message?.toLowerCase().includes("demand");
+    const lastErrorMessage = lastError instanceof Error ? (lastError as Error).message : String(lastError || "");
+    const isQuotaOrCapacity = lastErrorMessage.includes("429") || 
+                              lastErrorMessage.includes("503") ||
+                              lastErrorMessage.toLowerCase().includes("quota") ||
+                              lastErrorMessage.toLowerCase().includes("demand");
 
     if (isQuotaOrCapacity) {
       console.warn("All Gemini models failed due to quota/capacity limits. Using local parser fallback.");
       const fallback = parseOfflineHeuristic(input);
       fallback.summary = `(AI capacity spike - local calculation) ${fallback.summary}`;
+      writeToCache(activityCache, cacheKey, fallback);
       return fallback;
     }
 
-    return {
+    const corporateError: ParseResult = {
       success: false,
       activities: [],
       totalCO2: 0,
       tips: [],
       summary: "",
-      error: lastError instanceof Error ? lastError.message : "All generative models in cascade failed to respond.",
+      error: "Unable to authorize or execute the carbon engine parse. Please retry later.",
     };
-  } catch (error: any) {
-    // Otherwise return a standard error so they can debug their API connection if they want to
+    return corporateError;
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? (error as Error).message : String(error);
+    console.error("Aura parser hit critical uncaught error:", errorMsg);
     return {
       success: false,
       activities: [],
       totalCO2: 0,
       tips: [],
       summary: "",
-      error: error instanceof Error ? error.message : "An unknown error occurred during Gemini AI parsing.",
+      error: "A critical diagnostic error occurred within the carbon calculation engine.",
     };
   }
 }
@@ -478,11 +519,20 @@ function parseOfflineSavingsHeuristic(input: string): CommunitySavingsResult {
 export async function parseCommunitySaving(
   input: string
 ): Promise<CommunitySavingsResult> {
+  const cacheKey = input.trim().toLowerCase();
+  const cachedResult = getFromCache(savingsCache, cacheKey);
+  if (cachedResult) {
+    console.log(`[Aura Cache] Cache hit for community savings input: "${cacheKey}"`);
+    return cachedResult;
+  }
+
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   
   if (!apiKey || apiKey === "" || apiKey.includes("your-gemini")) {
     console.warn("Gemini API key is unconfigured. Estimating savings locally.");
-    return parseOfflineSavingsHeuristic(input);
+    const fallback = parseOfflineSavingsHeuristic(input);
+    writeToCache(savingsCache, cacheKey, fallback);
+    return fallback;
   }
 
   try {
@@ -495,7 +545,7 @@ export async function parseCommunitySaving(
       "gemini-2.0-flash",
       "gemini-1.5-flash"
     ];
-    let lastError: any = null;
+    let lastError: Error | unknown = null;
 
     for (const modelName of modelsToTry) {
       try {
@@ -517,45 +567,52 @@ export async function parseCommunitySaving(
         const parsed = JSON.parse(jsonMatch[1]);
         console.log(`[Aura Savings Parser] Successfully parsed with model: ${modelName}`);
 
-        return {
+        const finalResult: CommunitySavingsResult = {
           success: true,
           actionTaken: parsed.actionTaken || "Carbon savings action",
           co2Saved: parsed.co2Saved || 0,
           explanation: parsed.explanation || "No explanation provided",
           isOfflineFallback: false,
         };
-      } catch (err: any) {
-        console.warn(`[Aura Savings Parser] Model ${modelName} failed:`, err.message || err);
+        writeToCache(savingsCache, cacheKey, finalResult);
+        return finalResult;
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn(`[Aura Savings Parser] Model ${modelName} failed:`, errMsg);
         lastError = err;
       }
     }
 
-    const isQuotaOrCapacity = lastError?.message?.includes("429") || 
-                              lastError?.message?.includes("503") ||
-                              lastError?.status === 429 || 
-                              lastError?.status === 503 ||
-                              lastError?.message?.toLowerCase().includes("quota") ||
-                              lastError?.message?.toLowerCase().includes("demand");
+    const lastErrorMessage = lastError instanceof Error ? (lastError as Error).message : String(lastError || "");
+    const isQuotaOrCapacity = lastErrorMessage.includes("429") || 
+                              lastErrorMessage.includes("503") ||
+                              lastErrorMessage.toLowerCase().includes("quota") ||
+                              lastErrorMessage.toLowerCase().includes("demand");
 
     if (isQuotaOrCapacity) {
       console.warn("All Gemini models failed. Using local heuristic savings fallback.");
-      return parseOfflineSavingsHeuristic(input);
+      const fallback = parseOfflineSavingsHeuristic(input);
+      writeToCache(savingsCache, cacheKey, fallback);
+      return fallback;
     }
 
-    return {
+    const corporateError: CommunitySavingsResult = {
       success: false,
       actionTaken: "",
       co2Saved: 0,
       explanation: "",
-      error: lastError instanceof Error ? lastError.message : "All generative models in cascade failed to respond.",
+      error: "Unable to authorize or execute the carbon savings audit. Please retry later.",
     };
-  } catch (error: any) {
+    return corporateError;
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? (error as Error).message : String(error);
+    console.error("Aura savings parser hit critical uncaught error:", errorMsg);
     return {
       success: false,
       actionTaken: "",
       co2Saved: 0,
       explanation: "",
-      error: error instanceof Error ? error.message : "An unknown error occurred during Gemini AI parsing.",
+      error: "A critical diagnostic error occurred within the carbon calculation engine.",
     };
   }
 }

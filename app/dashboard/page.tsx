@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
+import { AnalyticsCharts } from "@/components/ui/analytics-charts";
 import {
   Sparkles,
   Leaf,
@@ -28,15 +29,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 
 const EXAMPLE_CHIPS = [
   { label: "🛺 Auto to market 5km", text: "I took an auto-rickshaw to the local market for 5km" },
@@ -372,81 +364,11 @@ export default function DashboardPage() {
 
         {/* Right Side: Visual Metrics Tracker */}
         <div className="lg:col-span-5 flex flex-col gap-8">
-          {/* Today's Score Dial */}
-          <GlassCard className="p-6 text-center border-primary/10" hover={false}>
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Today's Carbon Output
-            </span>
-            <div className="my-6 flex items-baseline justify-center gap-1.5">
-              <AnimatedCounter
-                value={todayTotal}
-                decimals={2}
-                className="text-fluid-lg text-primary"
-              />
-              <span className="text-lg font-bold text-primary">kg CO2e</span>
-            </div>
-            <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-normal">
-              Compared to typical daily targets. Balanced meals and metro commuting help stay within safety limits.
-            </p>
-          </GlassCard>
-
-          {/* Recharts Area Chart */}
-          <GlassCard className="p-6 border-primary/10" hover={false}>
-            <div className="flex items-center gap-2 mb-6">
-              <Leaf className="h-4.5 w-4.5 text-primary" />
-              <h3 className="font-heading text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                Weekly Carbon Score
-              </h3>
-            </div>
-
-            <div className="h-56 w-full">
-              {mounted && weeklyData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={weeklyData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                    <XAxis
-                      dataKey="date"
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: "var(--card)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "12px",
-                        fontSize: "12px",
-                        color: "var(--foreground)",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="total"
-                      stroke="var(--primary)"
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill="url(#chartGradient)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                  No tracking logs found. Try adding inputs on the left.
-                </div>
-              )}
-            </div>
-          </GlassCard>
+          <AnalyticsCharts
+            weeklyData={weeklyData}
+            todayTotal={todayTotal}
+            mounted={mounted}
+          />
 
           {/* Recent Logs List */}
           <div className="flex flex-col gap-3">
